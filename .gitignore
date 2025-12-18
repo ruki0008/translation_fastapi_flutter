@@ -1,3 +1,4 @@
 onnx-ja-en/
 tokenizer-ja-en/
 .env
+myvenv/
