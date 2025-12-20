@@ -82,9 +82,3 @@ async def transcribe_audio(file: UploadFile = File(...)):
     translated = translate(transcript.text)
     return {"transcript": transcript.text,
             "translation": translated}
-
-# # --- API エンドポイント ---
-# @app.post("/translate")
-# def translate_endpoint(req: TranslateRequest):
-#     translated = translate(req.text)
-#     return {"translation": translated}
