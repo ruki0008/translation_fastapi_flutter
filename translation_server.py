@@ -57,7 +57,7 @@ def translate(text: str) -> str:
     return translated_text
 
 # --- API エンドポイント ---
-@app.post("/translate")
+@app.post("/speech/onnx")
 def translate_endpoint(req: TranslateRequest):
     translated = translate(req.text)
     return {"translation": translated}

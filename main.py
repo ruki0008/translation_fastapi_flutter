@@ -1,54 +1,39 @@
-from transformers import AutoTokenizer
-import onnxruntime as ort
-import numpy as np
+from fastapi import FastAPI, UploadFile, File
+from pydantic import BaseModel
+from dotenv import load_dotenv
+load_dotenv()
+from services.whisper_azure import transcribe_and_translate as azure_transcribe
+from services.whisper_onnx import transcribe_and_translate as onnx_transcribe
+from services.onnx_translate import translate as onnx_translate_text
 
-# tokenizer
-tokenizer = AutoTokenizer.from_pretrained("./tokenizer-ja-en")
+from starlette.concurrency import run_in_threadpool  # 追加
 
-# load onnx encoder/decoder
-encoder = ort.InferenceSession("./onnx-ja-en/encoder_model.onnx")
-decoder = ort.InferenceSession("./onnx-ja-en/decoder_model.onnx")
+app = FastAPI()
 
-# input text
-text = "こんにちは"
-inputs = tokenizer(text, return_tensors="np")
+class TranslateRequest(BaseModel):
+    text: str
 
-# 1. run encoder
-encoder_outputs = encoder.run(
-    None,
-    {
-        "input_ids": inputs["input_ids"],
-        "attention_mask": inputs["attention_mask"]
-    }
-)
+@app.post("/whisper/azure")
+async def whisper_azure(file: UploadFile = File(...)):
+    transcript, translation = await azure_transcribe(file)
+    return {"transcript": transcript, "translation": translation}
 
-encoder_hidden_states = encoder_outputs[0]
+# @app.post("/whisper/onnx")
+# async def whisper_onnx(file: UploadFile = File(...)):
+#     print("whisper/onnx にリクエスト到達")
+#     # 同期処理をスレッドプールで実行
+#     transcript, translation = await run_in_threadpool(onnx_transcribe, file)
+#     return {"transcript": transcript, "translation": translation}
 
-# 2. prepare decoder start token
-decoder_input_ids = np.array([[tokenizer.pad_token_id]], dtype=np.int64)
+# from starlette.concurrency import run_in_threadpool
 
-output_tokens = []
+@app.post("/whisper/onnx")
+async def whisper_onnx(file: UploadFile = File(...)):
+    # 同期関数をスレッドプールで安全に実行
+    transcript, translation = await run_in_threadpool(onnx_transcribe, file)
+    return {"transcript": transcript, "translation": translation}
 
-# 3. greedy decoding loop
-for _ in range(50):
-    decoder_outputs = decoder.run(
-        None,
-        {
-            "input_ids": decoder_input_ids,
-            "encoder_hidden_states": encoder_hidden_states,
-            "encoder_attention_mask": inputs["attention_mask"],
-        }
-    )
-
-    logits = decoder_outputs[0][:, -1, :]  # 最後の Token の logits
-    next_token = np.argmax(logits, axis=-1)
-
-    output_tokens.append(int(next_token))
-    decoder_input_ids = np.hstack([decoder_input_ids, next_token.reshape(1, -1)])
-
-    if next_token == tokenizer.eos_token_id:
-        break
-
-# decode output
-translated_text = tokenizer.decode(output_tokens, skip_special_tokens=True)
-print("翻訳:", translated_text)
+@app.post("/speech/onnx")
+def text_onnx(req: TranslateRequest):
+    translated = onnx_translate_text(req.text)
+    return {"translation": translated}

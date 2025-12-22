@@ -47,7 +47,7 @@ def translate(text: str, from_lang="ja", to_lang="en") -> str:
     return response.json()[0]["translations"][0]["text"]
 
 # --- 音声 → 文字起こし → 翻訳 ---
-@app.post("/translate_azure_transcribe")
+@app.post("/whisper/azure")
 async def transcribe_audio(file: UploadFile = File(...)):
     temp_filename = f"temp_{file.filename}"
 

@@ -63,7 +63,7 @@ def translate(text: str) -> str:
     translated_text = tokenizer.decode(output_tokens, skip_special_tokens=True)
     return translated_text
 
-@app.post("/translate_transcribe")
+@app.post("/whisper/onnx")
 async def transcribe_audio(file: UploadFile = File(...)):
     # 一時的にファイルを保存
     temp_filename = f"temp_{file.filename}"
