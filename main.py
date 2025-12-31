@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from pydantic import BaseModel
 from dotenv import load_dotenv
 load_dotenv()
@@ -18,20 +18,25 @@ async def whisper_azure(file: UploadFile = File(...)):
     transcript, translation = await azure_transcribe(file)
     return {"transcript": transcript, "translation": translation}
 
-# @app.post("/whisper/onnx")
+@app.post("/whisper/onnx")
+async def whisper_onnx(
+    file: UploadFile = File(...),
+    prompt: str | None = Form(None),   # ← Flutter の prompt を受け取る
+):
+    print("📩 prompt =", prompt)
+    print("📁 file =", file.filename)
+
+    # result = await onnx_transcribe(file, prompt)
+    result = await onnx_transcribe(file, prompt)
+
+    return {
+        "transcript": result["transcript"],
+        "translation": result["translation"],
+    }
 # async def whisper_onnx(file: UploadFile = File(...)):
-#     print("whisper/onnx にリクエスト到達")
-#     # 同期処理をスレッドプールで実行
+#     # 同期関数をスレッドプールで安全に実行
 #     transcript, translation = await run_in_threadpool(onnx_transcribe, file)
 #     return {"transcript": transcript, "translation": translation}
-
-# from starlette.concurrency import run_in_threadpool
-
-@app.post("/whisper/onnx")
-async def whisper_onnx(file: UploadFile = File(...)):
-    # 同期関数をスレッドプールで安全に実行
-    transcript, translation = await run_in_threadpool(onnx_transcribe, file)
-    return {"transcript": transcript, "translation": translation}
 
 @app.post("/speech/onnx")
 def text_onnx(req: TranslateRequest):

@@ -2,3 +2,7 @@ onnx-ja-en/
 tokenizer-ja-en/
 .env
 myvenv/
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
